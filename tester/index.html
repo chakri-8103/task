@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Push Notification System</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        button { padding: 10px 20px; font-size: 18px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>Push Notification System</h2>
+    <button onclick="sendNotification()">Start</button>
+
+    <script>
+        let ws;
+
+        function connectWebSocket() {
+            console.log("🔵 [INFO] Connecting to WebSocket Server...");
+
+            ws = new WebSocket("ws://10.70.9.141:8080"); // Change to wss:// for HTTPS
+
+            ws.onopen = () => console.log("✅ [SUCCESS] WebSocket Connected!");
+
+            ws.onerror = (error) => console.error("❌ [ERROR] WebSocket Error:", error);
+
+            ws.onclose = () => {
+                console.warn("⚠️ [WARNING] WebSocket Disconnected! Reconnecting...");
+                setTimeout(connectWebSocket, 3000); // Auto-reconnect after 3 seconds
+            };
+
+            ws.onmessage = (event) => {
+                console.log("📥 [MESSAGE] From Server:", event.data);
+                alert("🚨 Alert: " + event.data); // Show alert box
+                showNotification(event.data);
+            };
+        }
+
+        function requestPermission() {
+            if (Notification.permission === "granted") {
+                console.log("✅ [SUCCESS] Notification permission already granted.");
+                return;
+            }
+
+            if (Notification.permission === "default") {
+                console.log("🔘 [INFO] Asking user for notification permission...");
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                        console.log("✅ [SUCCESS] Permission granted.");
+                    } else {
+                        console.warn("❌ [WARNING] Notification permission denied.");
+                        alert("To receive notifications, please enable them in browser settings.");
+                    }
+                });
+            } else {
+                console.warn("❌ [WARNING] Notifications are blocked! Enable them in browser settings.");
+                alert("You have blocked notifications. Enable them manually.");
+            }
+        }
+
+        function showNotification(message) {
+            if (Notification.permission !== "granted") {
+                console.warn("❌ [WARNING] Notification permission denied.");
+                return;
+            }
+
+            console.log("🔔 [NOTIFICATION] Showing Windows Notification...");
+            new Notification("📢 Alert!", {
+                body: message,
+                icon: "https://upload.wikimedia.org/wikipedia/commons/3/3c/Notification-icon.png", // Ensure this URL is valid
+                silent: false, // Makes a sound
+            });
+        }
+
+        function sendNotification() {
+            console.log("🔘 [INFO] Start button clicked");
+
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.warn("⚠️ [WARNING] WebSocket not connected! Reconnecting...");
+                connectWebSocket();
+                return;
+            }
+
+            if (Notification.permission === "default") {
+                requestPermission(); // Ask for permission first
+                return;
+            }
+
+            if (Notification.permission === "granted") {
+                console.log("✅ [SUCCESS] Sending 'start' message...");
+                ws.send("start");
+            } else {
+                console.warn("❌ [WARNING] Notification permission is denied.");
+                alert("Please allow notifications in browser settings.");
+            }
+        }
+
+        window.onload = () => {
+            requestPermission();
+            connectWebSocket();
+        };
+    </script>
+
+</body>
+</html>
